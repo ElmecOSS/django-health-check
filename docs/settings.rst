@@ -26,12 +26,14 @@ Create a secure token:
 Add in your settings.py:
 
 .. data::
+
     HEALTH_CHECK_TOKENS="MyVerySecretT0k3n"
 
 
 Now you can authenticate with your token:
 
 .. code::
+
      $ curl -v -X GET -H http://www.example.com/ht/?HCAUTH=MyVerySecretT0k3n
         or
      $ curl -v -X GET -H "Authorization: HCAUTH Token=MyVerySecretT0k3n" http://www.example.com/ht/
