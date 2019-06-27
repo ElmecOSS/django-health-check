@@ -23,18 +23,17 @@ servers from an attacker.
 
 Create a secure token:
 
-.. code:: shell
-
-    python -c "import secrets; print(secrets.token_urlsafe())"
-
-Add it to your URL:
+Add in your settings.py:
 
 .. code:: python
+    HEALTH_CHECK_TOKENS="MyVerySecretT0k3n"
 
-    urlpatterns = [
-        # ...
-        url(r'^ht/super_secret_token/'), include('health_check.urls')),
-    ]
+.. code::
+     $ curl -v -X GET -H http://www.example.com/ht/?HCAUTH=MyVerySecretT0k3n
+        or
+     $ curl -v -X GET -H "Authorization: HCAUTH Token=MyVerySecretT0k3n" http://www.example.com/ht/
+
+
 
 You can still use any uptime bot that is URL based while enjoying token protection.
 
