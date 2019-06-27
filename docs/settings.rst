@@ -31,7 +31,7 @@ Add in your settings.py:
 
 Now you can authenticate with your token:
 
-.. code:: bash
+.. code::
      $ curl -v -X GET -H http://www.example.com/ht/?HCAUTH=MyVerySecretT0k3n
         or
      $ curl -v -X GET -H "Authorization: HCAUTH Token=MyVerySecretT0k3n" http://www.example.com/ht/
