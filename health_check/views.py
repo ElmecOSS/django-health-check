@@ -2,6 +2,7 @@ import copy
 import re
 from concurrent.futures import ThreadPoolExecutor
 
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
@@ -87,11 +88,20 @@ class MainView(TemplateView):
     @never_cache
     def get(self, request, *args, **kwargs):
         errors = []
-
         plugins = sorted((
             plugin_class(**copy.deepcopy(options))
             for plugin_class, options in plugin_dir._registry
         ), key=lambda plugin: plugin.identifier())
+        format_override = request.GET.get('format')
+        if not self.__check_token():
+            if format_override == 'json':
+                return JsonResponse({"Error": "unauthorized"}, status=401)
+
+            return HttpResponse(
+                'Error: unauthorized',
+                status=401,
+                content_type='text/plain'
+            )
 
         def _run(plugin):
             plugin.run_check()
@@ -114,8 +124,6 @@ class MainView(TemplateView):
 
         status_code = 500 if errors else 200
 
-        format_override = request.GET.get('format')
-
         if format_override == 'json':
             return self.render_to_response_json(plugins, status_code)
 
@@ -137,3 +145,24 @@ class MainView(TemplateView):
             {str(p.identifier()): str(p.pretty_status()) for p in plugins},
             status=status
         )
+
+    def _get_token(self):
+        try:
+            header = self.request.META['HTTP_AUTHORIZATION']
+            reg = re.compile('(\\w+)[=] ?"?([\\w-]+)"?')
+            header_dict = dict(reg.findall(header))
+            return header_dict['Token']
+        except KeyError:
+            token = self.request.GET.get(getattr(settings, 'HEALTH_CHECK_TOKEN_NAME', "HCAUTH"))
+
+        return token
+
+    def __check_token(self):
+        if getattr(settings, 'HEALTH_CHECK_TOKENS', False):
+            hc_tokens = settings.HEALTH_CHECK_TOKENS.split(',')
+        elif getattr(settings, 'HEALTH_CHECK_TOKEN', False):
+            hc_tokens = [settings.HEALTH_CHECK_TOKEN, ]
+        else:
+            return True
+
+        return self._get_token() in hc_tokens

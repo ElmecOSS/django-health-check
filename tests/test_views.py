@@ -1,6 +1,7 @@
 import json
 
 import pytest
+from django.conf import settings
 
 from health_check.backends import BaseHealthCheckBackend
 from health_check.conf import HEALTH_CHECK
@@ -49,6 +50,7 @@ class TestMediaType:
         ('*/*;v=b3', MediaType('*/*')),
         ('*/*; q=0.5; v=b3', MediaType('*/*', 0.5)),
     ]
+
     @pytest.mark.parametrize("type, expected", valid_strings)
     def test_from_valid_strings(self, type, expected):
         assert MediaType.from_string(type) == expected
@@ -59,6 +61,7 @@ class TestMediaType:
         'text/html; xxx',
         'text/html;  =a',
     ]
+
     @pytest.mark.parametrize("type", invalid_strings)
     def test_from_invalid_strings(self, type):
         with pytest.raises(ValueError) as e:
@@ -255,7 +258,7 @@ class TestMainView:
         assert response.status_code == 200, response.content.decode('utf-8')
         assert response['content-type'] == 'application/json'
         assert json.loads(response.content.decode('utf-8')) == \
-            {JSONSuccessBackend().identifier(): JSONSuccessBackend().pretty_status()}
+               {JSONSuccessBackend().identifier(): JSONSuccessBackend().pretty_status()}
 
     def test_error_param_json(self, client):
         class JSONErrorBackend(BaseHealthCheckBackend):
@@ -268,3 +271,110 @@ class TestMainView:
         assert response.status_code == 500, response.content.decode('utf-8')
         assert response['content-type'] == 'application/json'
         assert 'JSON Error' in json.loads(response.content.decode('utf-8'))[JSONErrorBackend().identifier()]
+
+    def test_unauthorized_queryparams_multi(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        settings.HEALTH_CHECK_TOKENS = "a123,b123"
+        response = client.get(self.url, {'HCAUTH': 'unauthtoken'})
+        assert response.status_code == 401, response.content.decode('utf-8')
+
+    def test_authorized_queryparams_multi(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        settings.HEALTH_CHECK_TOKENS = "a123,b123"
+        response = client.get(self.url, {'HCAUTH': 'a123'})
+
+        response2 = client.get(self.url, {'HCAUTH': 'b123'})
+        assert response.status_code == 200, response.content.decode('utf-8')
+        assert response2.status_code == 200, response2.content.decode('utf-8')
+
+    def test_unauthorized_queryparams_single(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        try:
+            delattr(settings, "HEALTH_CHECK_TOKENS")
+        except AttributeError:
+            pass
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        settings.HEALTH_CHECK_TOKEN = "a123"
+        response = client.get(self.url, {'HCAUTH': 'unauthtoken'})
+        assert response.status_code == 401, response.content.decode('utf-8')
+
+    def test_authorized_queryparams_single(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        try:
+            delattr(settings, "HEALTH_CHECK_TOKENS")
+        except AttributeError:
+            pass
+
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        settings.HEALTH_CHECK_TOKEN = "a123"
+        response = client.get(self.url, {'HCAUTH': 'a123'})
+
+        assert response.status_code == 200, response.content.decode('utf-8')
+
+    def test_authorized_header_single(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        try:
+            delattr(settings, "HEALTH_CHECK_TOKENS")
+        except AttributeError:
+            pass
+
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        settings.HEALTH_CHECK_TOKEN = "a123"
+        header = {'HTTP_AUTHORIZATION': 'Token=a123'}
+        response = client.get(self.url, **header)
+
+        assert response.status_code == 200, response.content.decode('utf-8')
+
+
+    def test_unauthorized_header_single(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        try:
+            delattr(settings, "HEALTH_CHECK_TOKENS")
+        except AttributeError:
+            pass
+
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        settings.HEALTH_CHECK_TOKEN = "a123"
+        header = {'HTTP_AUTHORIZATION': 'Token=notvalidtoken'}
+        response = client.get(self.url, **header)
+
+        assert response.status_code == 401, response.content.decode('utf-8')
+
+    def test_success_auth_json(self, client):
+        class JSONSuccessBackend(BaseHealthCheckBackend):
+            def run_check(self):
+                pass
+
+        settings.HEALTH_CHECK_TOKENS = "a123,b123"
+
+        plugin_dir.reset()
+        plugin_dir.register(JSONSuccessBackend)
+        response = client.get(self.url, {'format': 'json', 'HCAUTH': 'unauthtoken'})
+        assert response.status_code == 401, response.content.decode('utf-8')
+        assert response['content-type'] == 'application/json'
