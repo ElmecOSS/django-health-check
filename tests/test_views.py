@@ -257,8 +257,9 @@ class TestMainView:
         response = client.get(self.url, {'format': 'json'})
         assert response.status_code == 200, response.content.decode('utf-8')
         assert response['content-type'] == 'application/json'
-        assert json.loads(response.content.decode('utf-8')) == \
-               {JSONSuccessBackend().identifier(): JSONSuccessBackend().pretty_status()}
+        assert json.loads(response.content.decode('utf-8')) == {
+            JSONSuccessBackend().identifier(): JSONSuccessBackend().pretty_status()
+        }
 
     def test_error_param_json(self, client):
         class JSONErrorBackend(BaseHealthCheckBackend):
@@ -346,7 +347,6 @@ class TestMainView:
         response = client.get(self.url, **header)
 
         assert response.status_code == 200, response.content.decode('utf-8')
-
 
     def test_unauthorized_header_single(self, client):
         class JSONSuccessBackend(BaseHealthCheckBackend):

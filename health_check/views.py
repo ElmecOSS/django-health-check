@@ -94,14 +94,7 @@ class MainView(TemplateView):
         ), key=lambda plugin: plugin.identifier())
         format_override = request.GET.get('format')
         if not self.__check_token():
-            if format_override == 'json':
-                return JsonResponse({"Error": "unauthorized"}, status=401)
-
-            return HttpResponse(
-                'Error: unauthorized',
-                status=401,
-                content_type='text/plain'
-            )
+            return self._get_unauthorized_response(format_override)
 
         def _run(plugin):
             plugin.run_check()
@@ -123,11 +116,13 @@ class MainView(TemplateView):
                         errors.extend(plugin.errors)
 
         status_code = 500 if errors else 200
-
+        accept_header = request.META.get('HTTP_ACCEPT', '*/*')
         if format_override == 'json':
             return self.render_to_response_json(plugins, status_code)
+        else:
+            return self._get_formatted_response(plugins, status_code, accept_header)
 
-        accept_header = request.META.get('HTTP_ACCEPT', '*/*')
+    def _get_formatted_response(self, plugins, status_code, accept_header):
         context = {'plugins': plugins, 'status_code': status_code}
         for media in MediaType.parse_header(accept_header):
             if media.mime_type in ('text/html', 'application/xhtml+xml', 'text/*', '*/*'):
@@ -137,6 +132,16 @@ class MainView(TemplateView):
         return HttpResponse(
             'Not Acceptable: Supported content types: text/html, application/json',
             status=406,
+            content_type='text/plain'
+        )
+
+    def _get_unauthorized_response(self, format_override):
+        if format_override == 'json':
+            return JsonResponse({"Error": "unauthorized"}, status=401)
+
+        return HttpResponse(
+            'Error: unauthorized',
+            status=401,
             content_type='text/plain'
         )
 

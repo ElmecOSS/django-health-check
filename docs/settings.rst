@@ -25,7 +25,7 @@ Create a secure token:
 
 Add in your settings.py:
 
-.. data::
+.. code:: python
 
     HEALTH_CHECK_TOKENS="MyVerySecretT0k3n"
 
