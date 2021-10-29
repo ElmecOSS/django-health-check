@@ -89,6 +89,8 @@ class MainView(CheckMixin, TemplateView):
         if format_override == 'json':
             return self.render_to_response_json(self.plugins, status_code)
 
+        if not self.__check_token():
+            return self._get_unauthorized_response(format_override)
         accept_header = request.META.get('HTTP_ACCEPT', '*/*')
         for media in MediaType.parse_header(accept_header):
             if media.mime_type in ('text/html', 'application/xhtml+xml', 'text/*', '*/*'):
@@ -110,3 +112,24 @@ class MainView(CheckMixin, TemplateView):
             {str(p.identifier()): str(p.pretty_status()) for p in plugins},
             status=status
         )
+
+    def _get_token(self):
+        try:
+            header = self.request.META['HTTP_AUTHORIZATION']
+            reg = re.compile('(\\w+)[=] ?"?([\\w-]+)"?')
+            header_dict = dict(reg.findall(header))
+            return header_dict['Token']
+        except KeyError:
+            token = self.request.GET.get(getattr(settings, 'HEALTH_CHECK_TOKEN_NAME', "HCAUTH"))
+
+        return token
+
+    def __check_token(self):
+        if getattr(settings, 'HEALTH_CHECK_TOKENS', False):
+            hc_tokens = settings.HEALTH_CHECK_TOKENS.split(',')
+        elif getattr(settings, 'HEALTH_CHECK_TOKEN', False):
+            hc_tokens = [settings.HEALTH_CHECK_TOKEN, ]
+        else:
+            return True
+
+        return self._get_token() in hc_tokens
