@@ -2,6 +2,8 @@
 import os.path
 import uuid
 
+from kombu import Queue
+
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 DEBUG = True
 
@@ -9,6 +11,10 @@ DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': ':memory:',
+    },
+    'other': {  # 2nd database conneciton to ensure proper connection handling
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':backup:',
     }
 }
 
@@ -23,6 +29,8 @@ INSTALLED_APPS = (
     'health_check.db',
     'health_check.storage',
     'health_check.contrib.celery',
+    'health_check.contrib.migrations',
+    'health_check.contrib.celery_ping',
     'health_check.contrib.s3boto_storage',
     'tests',
 )
@@ -54,7 +62,7 @@ SECRET_KEY = uuid.uuid4().hex
 
 USE_L10N = True
 
-CELERY_TASK_QUEUES = {
-    'default': {},
-    'queue2': {}
-}
+CELERY_QUEUES = [
+    Queue('default'),
+    Queue('queue2'),
+]

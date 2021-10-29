@@ -2,7 +2,7 @@
 django-health-check
 ===================
 
-|version| |ci| |coverage| |health| |license|
+|version| |coverage| |health| |license|
 
 This project checks for various conditions and provides reports when anomalous
 behavior is detected.
@@ -15,7 +15,9 @@ The following health checks are bundled with this project:
 - disk and memory utilization (via ``psutil``)
 - AWS S3 storage
 - Celery task queue
+- Celery ping
 - RabbitMQ
+- Migrations
 
 Writing your own custom health checks is also very quick and easy.
 
@@ -38,8 +40,6 @@ Supported Versions
 
 We officially only support the latest version of Python as well as the
 latest version of Django and the latest Django LTS version.
-
-.. note:: The latest version to support Python 2 is 2.4.0
 
 Installation
 ------------
@@ -69,11 +69,16 @@ Add the ``health_check`` applications to your ``INSTALLED_APPS``:
         'health_check.db',                          # stock Django health checkers
         'health_check.cache',
         'health_check.storage',
+        'health_check.contrib.migrations',
         'health_check.contrib.celery',              # requires celery
+        'health_check.contrib.celery_ping',         # requires celery
         'health_check.contrib.psutil',              # disk and memory utilization; requires psutil
-        'health_check.contrib.s3boto_storage',      # requires boto and S3BotoStorage backend
+        'health_check.contrib.s3boto3_storage',     # requires boto3 and S3BotoStorage backend
         'health_check.contrib.rabbitmq',            # requires RabbitMQ broker
+        'health_check.contrib.redis',               # requires Redis broker
     ]
+
+Note : If using ``boto 2.x.x`` use ``health_check.contrib.s3boto_storage``
 
 (Optional) If using the ``psutil`` app, you can configure disk and memory
 threshold settings; otherwise below defaults are assumed. If you want to disable
@@ -99,6 +104,12 @@ on django.conf.settings with the required format to connect to your rabbit serve
 
     BROKER_URL = amqp://myuser:mypassword@localhost:5672/myvhost
 
+To use the Redis healthcheck, please make sure that there is a variable named ``REDIS_URL``
+on django.conf.settings with the required format to connect to your redis server. For example:
+
+.. code::
+
+    REDIS_URL = redis://localhost:6370
 
 Setting up monitoring
 ---------------------
@@ -237,6 +248,7 @@ and customizing the ``template_name``, ``get``, ``render_to_response`` and ``ren
 
         def get(self, request, *args, **kwargs):
             plugins = []
+            status = 200 # needs to be filled status you need
             # ...
             if 'application/json' in request.META.get('HTTP_ACCEPT', ''):
                 return self.render_to_response_json(plugins, status)
@@ -247,7 +259,7 @@ and customizing the ``template_name``, ``get``, ``render_to_response`` and ``ren
 
         def render_to_response_json(self, plugins, status):  # customize JSON output
             return JsonResponse(
-                {str(p.identifier()): 'COOL' if status == 200 else 'SWEATY' for p in plugins}
+                {str(p.identifier()): 'COOL' if status == 200 else 'SWEATY' for p in plugins},
                 status=status
             )
 
@@ -259,6 +271,26 @@ and customizing the ``template_name``, ``get``, ``render_to_response`` and ``ren
         url(r'^ht/$', views.HealthCheckCustomView.as_view(), name='health_check_custom'),
     ]
 
+Django command
+--------------
+
+You can run the Django command `health_check` to perform your health checks via the command line,
+or periodically with a cron, as follow:
+
+.. code::
+
+    django-admin health_check
+
+This should yield the following output:
+
+.. code::
+
+    DatabaseHealthCheck      ... working
+    CustomHealthCheck        ... unavailable: Something went wrong!
+
+Similar to the http version, a critical error will cause the command to quit with the exit code `1`.
+
+
 Other resources
 ---------------
 
@@ -267,13 +299,11 @@ Other resources
 
 .. |version| image:: https://img.shields.io/pypi/v/django-health-check.svg
    :target: https://pypi.python.org/pypi/django-health-check/
-.. |ci| image:: https://api.travis-ci.org/KristianOellegaard/django-health-check.svg?branch=master
-   :target: https://travis-ci.org/KristianOellegaard/django-health-check
 .. |coverage| image:: https://codecov.io/gh/KristianOellegaard/django-health-check/branch/master/graph/badge.svg
    :target: https://codecov.io/gh/KristianOellegaard/django-health-check
 .. |health| image:: https://landscape.io/github/KristianOellegaard/django-health-check/master/landscape.svg?style=flat
    :target: https://landscape.io/github/KristianOellegaard/django-health-check/master
-.. |license| image:: https://img.shields.io/badge/license-BSD-blue.svg
+.. |license| image:: https://img.shields.io/badge/license-MIT-blue.svg
    :target: LICENSE
 
 .. _Pingdom: https://www.pingdom.com/
