@@ -9,4 +9,5 @@ pydocstyle
 pep8-naming
 pytest<4
 pytest-django
-redis==3.3.8
+redis==3.5.3
+pytest-cov

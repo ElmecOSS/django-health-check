@@ -1,5 +1,6 @@
 import re
 
+from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.cache import never_cache
 from django.views.generic import TemplateView
@@ -85,12 +86,10 @@ class MainView(CheckMixin, TemplateView):
         status_code = 500 if self.errors else 200
 
         format_override = request.GET.get('format')
-
-        if format_override == 'json':
-            return self.render_to_response_json(self.plugins, status_code)
-
         if not self.__check_token():
             return self._get_unauthorized_response(format_override)
+        if format_override == 'json':
+            return self.render_to_response_json(self.plugins, status_code)
         accept_header = request.META.get('HTTP_ACCEPT', '*/*')
         for media in MediaType.parse_header(accept_header):
             if media.mime_type in ('text/html', 'application/xhtml+xml', 'text/*', '*/*'):
@@ -133,3 +132,14 @@ class MainView(CheckMixin, TemplateView):
             return True
 
         return self._get_token() in hc_tokens
+
+    def _get_unauthorized_response(self, format_override):
+        if format_override == 'json':
+            return JsonResponse({"Error": "unauthorized"}, status=401)
+
+        return HttpResponse(
+            'Error: unauthorized',
+            status=401,
+            content_type='text/plain'
+        )
+
