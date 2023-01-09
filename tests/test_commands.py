@@ -9,7 +9,7 @@ from health_check.plugins import plugin_dir
 
 class FailPlugin(BaseHealthCheckBackend):
     def check_status(self):
-        self.add_error('Oops')
+        self.add_error("Oops")
 
 
 class OkPlugin(BaseHealthCheckBackend):
@@ -18,7 +18,7 @@ class OkPlugin(BaseHealthCheckBackend):
 
 
 class TestCommand:
-    @pytest.yield_fixture(autouse=True)
+    @pytest.fixture(autouse=True)
     def setup(self):
         plugin_dir.reset()
         plugin_dir.register(FailPlugin)

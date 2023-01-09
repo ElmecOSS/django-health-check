@@ -1,4 +1,5 @@
-import mock
+from unittest import mock
+
 from redis.exceptions import ConnectionError, TimeoutError
 
 from health_check.contrib.redis.backends import RedisHealthCheck
@@ -15,7 +16,9 @@ class TestRedisHealthCheck:
 
         # mock returns
         mocked_connection.return_value = mock.MagicMock()
-        mocked_connection.return_value.__enter__.side_effect = ConnectionRefusedError("Refused connection")
+        mocked_connection.return_value.__enter__.side_effect = ConnectionRefusedError(
+            "Refused connection"
+        )
 
         # instantiates the class
         redis_healthchecker = RedisHealthCheck()
@@ -25,7 +28,7 @@ class TestRedisHealthCheck:
         assert len(redis_healthchecker.errors), 1
 
         # mock assertions
-        mocked_connection.assert_called_once_with('redis://localhost/1')
+        mocked_connection.assert_called_once_with("redis://localhost/1")
 
     @mock.patch("health_check.contrib.redis.backends.getattr")
     @mock.patch("health_check.contrib.redis.backends.from_url")
@@ -35,7 +38,9 @@ class TestRedisHealthCheck:
 
         # mock returns
         mocked_connection.return_value = mock.MagicMock()
-        mocked_connection.return_value.__enter__.side_effect = TimeoutError("Timeout Error")
+        mocked_connection.return_value.__enter__.side_effect = TimeoutError(
+            "Timeout Error"
+        )
 
         # instantiates the class
         redis_healthchecker = RedisHealthCheck()
@@ -45,7 +50,7 @@ class TestRedisHealthCheck:
         assert len(redis_healthchecker.errors), 1
 
         # mock assertions
-        mocked_connection.assert_called_once_with('redis://localhost/1')
+        mocked_connection.assert_called_once_with("redis://localhost/1")
 
     @mock.patch("health_check.contrib.redis.backends.getattr")
     @mock.patch("health_check.contrib.redis.backends.from_url")
@@ -55,7 +60,9 @@ class TestRedisHealthCheck:
 
         # mock returns
         mocked_connection.return_value = mock.MagicMock()
-        mocked_connection.return_value.__enter__.side_effect = ConnectionError("Connection Error")
+        mocked_connection.return_value.__enter__.side_effect = ConnectionError(
+            "Connection Error"
+        )
 
         # instantiates the class
         redis_healthchecker = RedisHealthCheck()
@@ -65,7 +72,7 @@ class TestRedisHealthCheck:
         assert len(redis_healthchecker.errors), 1
 
         # mock assertions
-        mocked_connection.assert_called_once_with('redis://localhost/1')
+        mocked_connection.assert_called_once_with("redis://localhost/1")
 
     @mock.patch("health_check.contrib.redis.backends.getattr")
     @mock.patch("health_check.contrib.redis.backends.from_url")
@@ -85,4 +92,4 @@ class TestRedisHealthCheck:
         assert len(redis_healthchecker.errors), 0
 
         # mock assertions
-        mocked_connection.assert_called_once_with('redis://localhost/1')
+        mocked_connection.assert_called_once_with("redis://localhost/1")
